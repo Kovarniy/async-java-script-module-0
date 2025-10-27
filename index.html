@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Старая Библиотека - Каталог книг</title>
+    <style>
+        body {
+            font-family: 'Times New Roman', serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5dc;
+            color: #333;
+        }
+        .header {
+            background: #8B4513;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border: 2px solid #654321;
+        }
+        .menu {
+            background: #DEB887;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #8B4513;
+        }
+        .book-list {
+            background: white;
+            padding: 15px;
+            border: 1px solid #ccc;
+            margin: 10px 0;
+            min-height: 200px;
+        }
+        .book-item {
+            padding: 10px;
+            border-bottom: 1px dotted #8B4513;
+            display: flex;
+            justify-content: space-between;
+        }
+        .book-title {
+            font-weight: bold;
+        }
+        .book-author {
+            color: #666;
+            font-style: italic;
+        }
+        .search-box {
+            background: #F0E68C;
+            padding: 15px;
+            margin: 15px 0;
+            border: 2px dashed #8B4513;
+        }
+        button {
+            background: #8B4513;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #A0522D;
+        }
+        .marquee {
+            background: #FFEBCD;
+            padding: 5px;
+            border: 1px solid #8B4513;
+            margin: 10px 0;
+        }
+        .counter {
+            background: #FFF8DC;
+            padding: 10px;
+            border: 1px solid #ccc;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+        .search-results {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        input[type="text"] {
+            padding: 8px;
+            width: 300px;
+            margin-right: 10px;
+        }
+        .loading {
+            color: #8B4513;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📚 Старая Библиотека им. Л.Н. Толстого</h1>
+        <p>Основана в 1998 году | Книг в каталоге: <span id="bookCount">0</span></p>
+    </div>
+
+    <div class="menu">
+        <strong>Меню:</strong> 
+        <a href="#" onclick="showAllBooks()">Главная</a> | 
+        <a href="#" onclick="showAllBooks()">Каталог</a> | 
+        <a href="#" onclick="addSampleBooks()">Добавить книги</a> | 
+        <a href="#" onclick="clearLibrary()">Очистить библиотеку</a>
+    </div>
+
+    <div class="marquee">
+        <marquee behavior="scroll" direction="left">
+            🎉 Специальное предложение: Все книги Достоевского со скидкой 20%!
+        </marquee>
+    </div>
+
+    <div class="search-box">
+        <h3>🔍 Поиск по каталогу</h3>
+        <input type="text" id="searchInput" placeholder="Введите название книги или автора...">
+        <button onclick="searchBooks()">Быстрый поиск</button>
+        <button onclick="heavySearch()">Глубокий поиск (зависает)</button>
+        
+        <div class="search-results" id="searchResults">
+            Введите запрос и нажмите кнопку поиска
+        </div>
+        
+        <div style="margin-top: 10px;">
+            <input type="text" id="testInput" placeholder="Попробуйте ввести текст здесь после запуска глубокого поиска..." style="width: 400px; padding: 5px;">
+        </div>
+    </div>
+
+    <div class="book-list">
+        <h2>📖 Книги в библиотеке:</h2>
+        <div id="booksContainer"></div>
+    </div>
+
+    <div class="counter">
+        <div>Посещений: <span id="visitCount">1</span></div>
+        <div>Сегодня: <span id="currentDate"></span></div>
+    </div>
+
+    <script>
+        // Инициализация библиотеки
+        function initLibrary() {
+            if (!localStorage.getItem('books')) {
+                // Начальный набор книг
+                const initialBooks = [
+                    { id: 1, title: "Война и мир", author: "Л.Н. Толстой", year: 1869 },
+                    { id: 2, title: "Преступление и наказание", author: "Ф.М. Достоевский", year: 1866 },
+                    { id: 3, title: "Мастер и Маргарита", author: "М.А. Булгаков", year: 1967 },
+                    { id: 4, title: "Евгений Онегин", author: "А.С. Пушкин", year: 1833 },
+                    { id: 5, title: "Отцы и дети", author: "И.С. Тургенев", year: 1862 },
+                    { id: 6, title: "Анна Каренина", author: "Л.Н. Толстой", year: 1877 },
+                    { id: 7, title: "Братья Карамазовы", author: "Ф.М. Достоевский", year: 1880 },
+                    { id: 8, title: "Мёртвые души", author: "Н.В. Гоголь", year: 1842 }
+                ];
+                localStorage.setItem('books', JSON.stringify(initialBooks));
+            }
+            
+            // Счетчик посещений
+            if (localStorage.getItem('visits')) {
+                let visits = parseInt(localStorage.getItem('visits')) + 1;
+                localStorage.setItem('visits', visits);
+                document.getElementById('visitCount').textContent = visits;
+            } else {
+                localStorage.setItem('visits', 1);
+                document.getElementById('visitCount').textContent = 1;
+            }
+            
+            // Обновляем дату
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('ru-RU');
+            
+            // Показываем книги
+            showAllBooks();
+        }
+
+        // Получить все книги из хранилища
+        function getAllBooks() {
+            return JSON.parse(localStorage.getItem('books') || '[]');
+        }
+
+        // Сохранить книги в хранилище
+        function saveBooks(books) {
+            localStorage.setItem('books', JSON.stringify(books));
+        }
+
+        // Показать все книги
+        function showAllBooks() {
+            const books = getAllBooks();
+            displayBooks(books);
+            document.getElementById('searchResults').innerHTML = `Показаны все книги (${books.length})`;
+            updateBookCount();
+        }
+
+        // Отобразить книги в контейнере
+        function displayBooks(books) {
+            const container = document.getElementById('booksContainer');
+            
+            if (books.length === 0) {
+                container.innerHTML = '<div class="book-item">В библиотеке нет книг</div>';
+                return;
+            }
+            
+            container.innerHTML = books.map(book => `
+                <div class="book-item">
+                    <div>
+                        <span class="book-title">«${book.title}»</span> 
+                        - <span class="book-author">${book.author}</span>
+                        <span style="color: #888; font-size: 12px;"> (${book.year})</span>
+                    </div>
+                    <button onclick="removeBook(${book.id})">Удалить</button>
+                </div>
+            `).join('');
+        }
+
+        // Обновить счетчик книг
+        function updateBookCount() {
+            const books = getAllBooks();
+            document.getElementById('bookCount').textContent = books.length;
+        }
+
+        // Быстрый поиск книг
+        function searchBooks() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            
+            if (!query) {
+                showAllBooks();
+                return;
+            }
+            
+            const books = getAllBooks();
+            const results = books.filter(book => 
+                book.title.toLowerCase().includes(query) || 
+                book.author.toLowerCase().includes(query)
+            );
+            
+            displayBooks(results);
+            document.getElementById('searchResults').innerHTML = 
+                `Найдено книг: ${results.length} по запросу "${query}"`;
+        }
+
+        // Глубокий поиск с блокировкой интерфейса
+        function heavySearch() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            const resultsDiv = document.getElementById('searchResults');
+            
+            if (!query) {
+                resultsDiv.innerHTML = '<span class="loading">Введите запрос для глубокого поиска</span>';
+                return;
+            }
+            
+            resultsDiv.innerHTML = '<span class="loading">🔎 Выполняется глубокий поиск по 10+ библиотекам...</span>';
+            
+            // Блокирующая операция
+            const startTime = Date.now();
+            let result = 0;
+            
+            // Долгий цикл, который заблокирует интерфейс
+            for(let i = 0; i < 900000000; i++) {
+                result += Math.sqrt(i) * Math.sin(i);
+                // Добавляем периодическое обновление для видимости "работы"
+                if(i % 10000000 === 0) {
+                    const progress = (i / 1000000000 * 100).toFixed(1);
+                    resultsDiv.innerHTML = `<span class="loading">🔎 Обработано ${progress}% записей...</span>`;
+                }
+            }
+            
+            // После блокировки выполняем обычный поиск
+            const books = getAllBooks();
+            const results = books.filter(book => 
+                book.title.toLowerCase().includes(query) || 
+                book.author.toLowerCase().includes(query)
+            );
+
+            let code = '';
+            if (results.find(({title}) => title === 'Мёртвые души')) {
+                code = '<br><b>Code: Прямой дорогой не доехать</b>';
+            }
+            
+            displayBooks(results);
+            resultsDiv.innerHTML = 
+                `✅ Глубокий поиск завершен! Найдено: ${results.length} книг по запросу "${query}" ${code}`;
+        }
+
+        // Удалить книгу
+        function removeBook(bookId) {
+            const books = getAllBooks();
+            const updatedBooks = books.filter(book => book.id !== bookId);
+            saveBooks(updatedBooks);
+            showAllBooks();
+        }
+
+        // Добавить примеры книг
+        function addSampleBooks() {
+            const sampleBooks = [
+                { id: Date.now(), title: "Герой нашего времени", author: "М.Ю. Лермонтов", year: 1840 },
+                { id: Date.now() + 1, title: "Ревизор", author: "Н.В. Гоголь", year: 1836 },
+                { id: Date.now() + 2, title: "Идиот", author: "Ф.М. Достоевский", year: 1869 },
+                { id: Date.now() + 3, title: "Капитанская дочка", author: "А.С. Пушкин", year: 1836 }
+            ];
+            
+            const currentBooks = getAllBooks();
+            const updatedBooks = [...currentBooks, ...sampleBooks];
+            saveBooks(updatedBooks);
+            showAllBooks();
+        }
+
+        // Очистить библиотеку
+        function clearLibrary() {
+            if (confirm("Вы уверены, что хотите очистить всю библиотеку?")) {
+                saveBooks([]);
+                showAllBooks();
+            }
+        }
+
+        // Добавляем реакцию на ввод в тестовое поле
+        document.getElementById('testInput').addEventListener('input', function(e) {
+            console.log('Введен текст:', e.target.value);
+        });
+
+        // Инициализация при загрузке страницы
+        window.onload = initLibrary;
+    </script>
+</body>
+</html>
