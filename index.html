@@ -99,10 +99,8 @@
 
     <div class="menu">
         <strong>Меню:</strong> 
-        <a href="#" onclick="showAllBooks()">Главная</a> | 
-        <a href="#" onclick="showAllBooks()">Каталог</a> | 
-        <a href="#" onclick="addSampleBooks()">Добавить книги</a> | 
-        <a href="#" onclick="clearLibrary()">Очистить библиотеку</a>
+        <a href="#" onclick="openMainPage(event)">Главная</a> |
+        <a href="#" onclick="restoreBooks(event)">Восстановить библиотеку</a>
     </div>
 
     <div class="marquee">
@@ -137,23 +135,29 @@
     </div>
 
     <script>
+        // Начальный набор книг
+        const initialBooks = [
+            { id: 1, title: "Война и мир", author: "Л.Н. Толстой", year: 1869 },
+            { id: 2, title: "Преступление и наказание", author: "Ф.М. Достоевский", year: 1866 },
+            { id: 3, title: "Мастер и Маргарита", author: "М.А. Булгаков", year: 1967 },
+            { id: 4, title: "Евгений Онегин", author: "А.С. Пушкин", year: 1833 },
+            { id: 5, title: "Отцы и дети", author: "И.С. Тургенев", year: 1862 },
+            { id: 6, title: "Анна Каренина", author: "Л.Н. Толстой", year: 1877 },
+            { id: 7, title: "Братья Карамазовы", author: "Ф.М. Достоевский", year: 1880 },
+            { id: 8, title: "Мёртвые души", synonym: "Мертвые души", author: "Н.В. Гоголь", year: 1842 }
+        ];
+        let booksState;
+        let filteredBooks;
+
         // Инициализация библиотеки
         function initLibrary() {
             if (!localStorage.getItem('books')) {
-                // Начальный набор книг
-                const initialBooks = [
-                    { id: 1, title: "Война и мир", author: "Л.Н. Толстой", year: 1869 },
-                    { id: 2, title: "Преступление и наказание", author: "Ф.М. Достоевский", year: 1866 },
-                    { id: 3, title: "Мастер и Маргарита", author: "М.А. Булгаков", year: 1967 },
-                    { id: 4, title: "Евгений Онегин", author: "А.С. Пушкин", year: 1833 },
-                    { id: 5, title: "Отцы и дети", author: "И.С. Тургенев", year: 1862 },
-                    { id: 6, title: "Анна Каренина", author: "Л.Н. Толстой", year: 1877 },
-                    { id: 7, title: "Братья Карамазовы", author: "Ф.М. Достоевский", year: 1880 },
-                    { id: 8, title: "Мёртвые души", author: "Н.В. Гоголь", year: 1842 }
-                ];
-                localStorage.setItem('books', JSON.stringify(initialBooks));
+                saveBooks(initialBooks);
             }
-            
+            booksState = getCurrentBookState();
+            filteredBooks = getCurrentBookState();
+            showBooksAndUpdateCount(booksState);
+
             // Счетчик посещений
             if (localStorage.getItem('visits')) {
                 let visits = parseInt(localStorage.getItem('visits')) + 1;
@@ -166,13 +170,10 @@
             
             // Обновляем дату
             document.getElementById('currentDate').textContent = new Date().toLocaleDateString('ru-RU');
-            
-            // Показываем книги
-            showAllBooks();
         }
 
         // Получить все книги из хранилища
-        function getAllBooks() {
+        function getCurrentBookState() {
             return JSON.parse(localStorage.getItem('books') || '[]');
         }
 
@@ -182,15 +183,14 @@
         }
 
         // Показать все книги
-        function showAllBooks() {
-            const books = getAllBooks();
-            displayBooks(books);
-            document.getElementById('searchResults').innerHTML = `Показаны все книги (${books.length})`;
+        function showBooksAndUpdateCount(books) {
+            showBooks(books);
+            setResult(`Показаны все книги (${books.length})`);
             updateBookCount();
         }
 
         // Отобразить книги в контейнере
-        function displayBooks(books) {
+        function showBooks(books) {
             const container = document.getElementById('booksContainer');
             
             if (books.length === 0) {
@@ -212,102 +212,79 @@
 
         // Обновить счетчик книг
         function updateBookCount() {
-            const books = getAllBooks();
-            document.getElementById('bookCount').textContent = books.length;
+            document.getElementById('bookCount').textContent = booksState.length;
+        }
+
+        function search(query) {
+            if (!query) return booksState;
+            return booksState.filter(book =>
+                book.title.toLowerCase().includes(query) ||
+                (book?.synonym && book.synonym.toLowerCase().includes(query)) ||
+                book.author.toLowerCase().includes(query)
+            );
         }
 
         // Быстрый поиск книг
         function searchBooks() {
-            const query = document.getElementById('searchInput').value.toLowerCase().trim();
-            
-            if (!query) {
-                showAllBooks();
-                return;
-            }
-            
-            const books = getAllBooks();
-            const results = books.filter(book => 
-                book.title.toLowerCase().includes(query) || 
-                book.author.toLowerCase().includes(query)
-            );
-            
-            displayBooks(results);
-            document.getElementById('searchResults').innerHTML = 
-                `Найдено книг: ${results.length} по запросу "${query}"`;
+            const query = getQuery();
+            filteredBooks = search(query);
+            showBooks(filteredBooks);
+            setResult(`Найдено книг: ${filteredBooks.length} по запросу "${query}"`);
         }
 
         // Глубокий поиск с блокировкой интерфейса
         function heavySearch() {
-            const query = document.getElementById('searchInput').value.toLowerCase().trim();
-            const resultsDiv = document.getElementById('searchResults');
-            
+            const query = getQuery();
             if (!query) {
-                resultsDiv.innerHTML = '<span class="loading">Введите запрос для глубокого поиска</span>';
+                setResult('<span class="loading">Введите запрос для глубокого поиска</span>');
                 return;
+            } else {
+                setResult('<span class="loading">🔎 Выполняется глубокий поиск по 10+ библиотекам...</span>');
             }
-            
-            resultsDiv.innerHTML = '<span class="loading">🔎 Выполняется глубокий поиск по 10+ библиотекам...</span>';
-            
-            // Блокирующая операция
-            const startTime = Date.now();
-            let result = 0;
-            
-            // Долгий цикл, который заблокирует интерфейс
-            for(let i = 0; i < 900000000; i++) {
-                result += Math.sqrt(i) * Math.sin(i);
-                // Добавляем периодическое обновление для видимости "работы"
-                if(i % 10000000 === 0) {
-                    const progress = (i / 1000000000 * 100).toFixed(1);
-                    resultsDiv.innerHTML = `<span class="loading">🔎 Обработано ${progress}% записей...</span>`;
+
+            setTimeout(() => {
+                // Блокирующая операция
+                for(let i = 0; i < 30000000000; i++) {
                 }
-            }
-            
-            // После блокировки выполняем обычный поиск
-            const books = getAllBooks();
-            const results = books.filter(book => 
-                book.title.toLowerCase().includes(query) || 
-                book.author.toLowerCase().includes(query)
-            );
 
-            let code = '';
-            if (results.find(({title}) => title === 'Мёртвые души')) {
-                code = '<br><b>Code: Прямой дорогой не доехать</b>';
-            }
-            
-            displayBooks(results);
-            resultsDiv.innerHTML = 
-                `✅ Глубокий поиск завершен! Найдено: ${results.length} книг по запросу "${query}" ${code}`;
+                // После блокировки выполняем обычный поиск
+                filteredBooks = search(query);
+                showBooks(filteredBooks);
+
+                let code = '';
+                if (filteredBooks.find(({title}) => title === 'Мёртвые души')) {
+                    code = '<br><b>Code: Прямой дорогой не доехать</b>';
+                }
+                setResult(`✅ Глубокий поиск завершен! Найдено: ${filteredBooks.length} книг по запросу "${query}" ${code}`);
+            });
+
         }
 
-        // Удалить книгу
+        function getQuery() {
+            return document.getElementById('searchInput').value.toLowerCase().trim();
+        }
+
+        function setResult(result) {
+            document.getElementById('searchResults').innerHTML = result;
+        }
+
         function removeBook(bookId) {
-            const books = getAllBooks();
-            const updatedBooks = books.filter(book => book.id !== bookId);
-            saveBooks(updatedBooks);
-            showAllBooks();
+            booksState = booksState.filter(book => book.id !== bookId);
+            filteredBooks = filteredBooks.filter(book => book.id !== bookId);
+            saveBooks(booksState);
+            showBooksAndUpdateCount(filteredBooks);
         }
 
-        // Добавить примеры книг
-        function addSampleBooks() {
-            const sampleBooks = [
-                { id: Date.now(), title: "Герой нашего времени", author: "М.Ю. Лермонтов", year: 1840 },
-                { id: Date.now() + 1, title: "Ревизор", author: "Н.В. Гоголь", year: 1836 },
-                { id: Date.now() + 2, title: "Идиот", author: "Ф.М. Достоевский", year: 1869 },
-                { id: Date.now() + 3, title: "Капитанская дочка", author: "А.С. Пушкин", year: 1836 }
-            ];
-            
-            const currentBooks = getAllBooks();
-            const updatedBooks = [...currentBooks, ...sampleBooks];
-            saveBooks(updatedBooks);
-            showAllBooks();
+        function openMainPage(event) {
+            event.preventDefault();
+            showBooksAndUpdateCount(booksState);
         }
 
-        // Очистить библиотеку
-        function clearLibrary() {
-            if (confirm("Вы уверены, что хотите очистить всю библиотеку?")) {
-                saveBooks([]);
-                showAllBooks();
-            }
+        function restoreBooks(event) {
+            event.preventDefault();
+            booksState = initialBooks;
+            saveBooks(initialBooks);
+            showBooksAndUpdateCount(initialBooks);
         }
 
         // Добавляем реакцию на ввод в тестовое поле
