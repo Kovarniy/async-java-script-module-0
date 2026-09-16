@@ -250,12 +250,8 @@
                 // После блокировки выполняем обычный поиск
                 filteredBooks = search(query);
                 showBooks(filteredBooks);
-
-                let code = '';
-                if (filteredBooks.find(({title}) => title === 'Мёртвые души')) {
-                    code = '<br><b>Code: Прямой дорогой не доехать</b>';
-                }
-                setResult(`✅ Глубокий поиск завершен! Найдено: ${filteredBooks.length} книг по запросу "${query}" ${code}`);
+                setResult(`✅ Глубокий поиск завершен! Найдено: ${filteredBooks.length} книг по запросу "${query}"`);
+                alert('кодовая фраза: Прямой дорогой не доехать');
             });
 
         }
