@@ -238,9 +238,8 @@
             if (!query) {
                 setResult('<span class="loading">Введите запрос для глубокого поиска</span>');
                 return;
-            } else {
-                setResult('<span class="loading">🔎 Выполняется глубокий поиск по 10+ библиотекам...</span>');
             }
+            setResult('<span class="loading">🔎 Выполняется глубокий поиск по 10+ библиотекам...</span>');
 
             setTimeout(() => {
                 // Блокирующая операция
